@@ -185,6 +185,7 @@ export type NotificationRequest = {
     minute?: boolean;
     second?: boolean;
     nanosecond?: boolean;
+    weekday?: boolean;
   };
   /**
    * Sets notification to be silent

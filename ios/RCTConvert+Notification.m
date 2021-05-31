@@ -62,14 +62,14 @@ RCT_ENUM_CONVERTER(UIBackgroundFetchResult, (@{
 + (NSDictionary *)RCTFormatLocalNotification:(UILocalNotification *)notification
 {
     NSMutableDictionary *formattedLocalNotification = [NSMutableDictionary dictionary];
-  
+
     if (notification.fireDate) {
         NSDateFormatter *formatter = [NSDateFormatter new];
         [formatter setDateFormat:@"yyyy-MM-dd'T'HH:mm:ss.SSSZZZZZ"];
         NSString *fireDateString = [formatter stringFromDate:notification.fireDate];
         formattedLocalNotification[@"fireDate"] = fireDateString;
     }
-  
+
     formattedLocalNotification[@"alertAction"] = RCTNullIfNil(notification.alertAction);
     formattedLocalNotification[@"alertTitle"] = RCTNullIfNil(notification.alertTitle);
     formattedLocalNotification[@"alertBody"] = RCTNullIfNil(notification.alertBody);
@@ -116,6 +116,7 @@ RCT_ENUM_CONVERTER(UIBackgroundFetchResult, (@{
     BOOL minute     = [RCTConvert BOOL:userDateComps[@"minute"]];
     BOOL second     = [RCTConvert BOOL:userDateComps[@"second"]];
     BOOL nanosecond = [RCTConvert BOOL:userDateComps[@"nanosecond"]];
+    BOOL weekday    = [RTCConvert BOOL:userDateComps[@"weekday"]];
 
     content.userInfo = [RCTConvert NSDictionary:details[@"userInfo"]];
     if (!isSilent) {
@@ -139,7 +140,8 @@ RCT_ENUM_CONVERTER(UIBackgroundFetchResult, (@{
         (hour ? NSCalendarUnitHour : 0) |
         (minute ? NSCalendarUnitMinute : 0) |
         (second ? NSCalendarUnitSecond : 0) |
-        (nanosecond ? NSCalendarUnitNanosecond : 0);
+        (nanosecond ? NSCalendarUnitNanosecond : 0) |
+        (weekday ? NSCalendarUnitWeekday : 0);
     NSDateComponents *triggerDate = fireDate
         ? [[NSCalendar currentCalendar]
            components:(repeats ? repeatDateComponents : defaultDateComponents) | NSCalendarUnitTimeZone
@@ -158,9 +160,9 @@ RCT_ENUM_CONVERTER(UIBackgroundFetchResult, (@{
 + (NSDictionary *)RCTFormatUNNotificationRequest:(UNNotificationRequest*)request
 {
     NSMutableDictionary *formattedRequest = [NSMutableDictionary dictionary];
-    
+
     formattedRequest[@"id"] = RCTNullIfNil(request.identifier);
-    
+
     UNNotificationContent *content = request.content;
     formattedRequest[@"title"] = RCTNullIfNil(content.title);
     formattedRequest[@"subtitle"] = RCTNullIfNil(content.subtitle);
@@ -170,7 +172,7 @@ RCT_ENUM_CONVERTER(UIBackgroundFetchResult, (@{
     formattedRequest[@"category"] = RCTNullIfNil(content.categoryIdentifier);
     formattedRequest[@"thread-id"] = RCTNullIfNil(content.threadIdentifier);
     formattedRequest[@"userInfo"] = RCTNullIfNil(RCTJSONClean(content.userInfo));
-    
+
     if (request.trigger) {
         UNCalendarNotificationTrigger* trigger = (UNCalendarNotificationTrigger*)request.trigger;
         NSDateFormatter *formatter = [NSDateFormatter new];
@@ -217,11 +219,11 @@ RCT_ENUM_CONVERTER(UIBackgroundFetchResult, (@{
     NSDictionary<NSString *, id> *details = [self NSDictionary:json];
     NSString* identifier = [RCTConvert NSString:details[@"id"]];
     NSString* title = [RCTConvert NSString:details[@"title"]];
-    
-    
+
+
     UNNotificationActionOptions options = [RCTConvert UNNotificationActionOptions:details[@"options"]];
     UNNotificationAction* action = details[@"textInput"] ? [UNTextInputNotificationAction actionWithIdentifier:identifier title:title options:options textInputButtonTitle:details[@"textInput"][@"buttonTitle"] textInputPlaceholder:details[@"textInput"][@"placeholder"]] : [UNNotificationAction actionWithIdentifier:identifier title:title options:options];
-    
+
     return action;
 }
 
@@ -235,15 +237,15 @@ RCT_ENUM_CONVERTER(UIBackgroundFetchResult, (@{
 + (UNNotificationCategory *)UNNotificationCategory:(id)json
 {
     NSDictionary<NSString *, id> *details = [self NSDictionary:json];
-    
+
     NSString* identifier = [RCTConvert NSString:details[@"id"]];
     NSMutableArray* actions = [NSMutableArray new];
         for (NSDictionary* action in [RCTConvert NSArray:details[@"actions"]]) {
             [actions addObject:[RCTConvert UNNotificationAction:action]];
         }
-    
+
     UNNotificationCategory* category = [UNNotificationCategory categoryWithIdentifier:identifier actions:actions intentIdentifiers:@[] options:UNNotificationCategoryOptionNone];
-    
+
     return category;
 }
 
@@ -259,21 +261,21 @@ RCT_ENUM_CONVERTER(UIBackgroundFetchResult, (@{
     UNNotification* notification = response.notification;
     NSMutableDictionary *formattedResponse = [[RCTConvert RCTFormatUNNotification:notification] mutableCopy];
     UNNotificationContent *content = notification.request.content;
-      
+
     NSMutableDictionary *userInfo = [content.userInfo mutableCopy];
     userInfo[@"userInteraction"] = [NSNumber numberWithInt:1];
     userInfo[@"actionIdentifier"] = response.actionIdentifier;
-    
+
     formattedResponse[@"badge"] = RCTNullIfNil(content.badge);
     formattedResponse[@"sound"] = RCTNullIfNil(content.sound);
     formattedResponse[@"userInfo"] = RCTNullIfNil(RCTJSONClean(userInfo));
     formattedResponse[@"actionIdentifier"] = RCTNullIfNil(response.actionIdentifier);
-      
+
     NSString* userText = [response isKindOfClass:[UNTextInputNotificationResponse class]] ? ((UNTextInputNotificationResponse *)response).userText : nil;
     if (userText) {
       formattedResponse[@"userText"] = RCTNullIfNil(userText);
     }
-      
+
     return formattedResponse;
 }
 @end
@@ -287,16 +289,16 @@ RCT_ENUM_CONVERTER(UIBackgroundFetchResult, (@{
 {
     NSMutableDictionary *formattedNotification = [NSMutableDictionary dictionary];
     UNNotificationContent *content = notification.request.content;
-  
+
     formattedNotification[@"identifier"] = notification.request.identifier;
-  
+
     if (notification.date) {
       NSDateFormatter *formatter = [NSDateFormatter new];
       [formatter setDateFormat:@"yyyy-MM-dd'T'HH:mm:ss.SSSZZZZZ"];
       NSString *dateString = [formatter stringFromDate:notification.date];
       formattedNotification[@"date"] = dateString;
     }
-  
+
     formattedNotification[@"title"] = RCTNullIfNil(content.title);
     formattedNotification[@"subtitle"] = RCTNullIfNil(content.subtitle);
     formattedNotification[@"body"] = RCTNullIfNil(content.body);
@@ -305,9 +307,8 @@ RCT_ENUM_CONVERTER(UIBackgroundFetchResult, (@{
     formattedNotification[@"category"] = RCTNullIfNil(content.categoryIdentifier);
     formattedNotification[@"thread-id"] = RCTNullIfNil(content.threadIdentifier);
     formattedNotification[@"userInfo"] = RCTNullIfNil(RCTJSONClean(content.userInfo));
-  
+
     return formattedNotification;
 }
 
 @end
-
