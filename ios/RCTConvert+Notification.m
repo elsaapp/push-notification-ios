@@ -133,7 +133,8 @@ RCT_ENUM_CONVERTER(UIBackgroundFetchResult, (@{
         NSCalendarUnitDay |
         NSCalendarUnitHour |
         NSCalendarUnitMinute |
-        NSCalendarUnitSecond;
+        NSCalendarUnitSecond |
+        NSCalendarUnitWeekday;
     NSCalendarUnit repeatDateComponents =
         (month ? NSCalendarUnitMonth : 0) |
         (day ? NSCalendarUnitDay : 0) |
